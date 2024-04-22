@@ -9,13 +9,12 @@ class MyNDaysNCampaignsAgent(NDaysNCampaignsAgent):
     def __init__(self):
         # TODO: fill this in (if necessary)
         super().__init__()
-        self.name = ""  # TODO: enter a name.
+        self.name = "orange peel"  
         self.market_freq = {}
         self.market_prop = {}
         self.build_freq()
         self.build_prop()
         self.total = 10000
-
 
     def build_freq(self):
         # building a frequqency dictionary which maps user frequencies of for all market segments 
@@ -125,6 +124,14 @@ class MyNDaysNCampaignsAgent(NDaysNCampaignsAgent):
     def get_campaign_bids(self, campaigns_for_auction:  Set[Campaign]) -> Dict[Campaign, float]:
         # TODO: fill this in 
         bids = {}
+        for camp in Campaign:
+            market_segment = self.get_market_seg(camp) # the target we are trying to reach
+
+            #TODO: when we do market segment / total is that the appropriate total 10000? or is it total of the sub category?
+            #because some subsets already return proportions... idk maybe I'm overcomplicating I'll have to think about it
+            
+            bid = (1-(market_segment/self.total)*(self.get_cumulative_reach))
+            bids.__setitem__(camp, bid)
 
         return bids
     
