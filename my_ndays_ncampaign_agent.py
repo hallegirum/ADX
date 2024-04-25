@@ -99,9 +99,10 @@ class MyNDaysNCampaignsAgent(NDaysNCampaignsAgent):
         seg = camp.target_segment
         market_segments = {}
         for segment in MarketSegment.all_segments():
-            if segment.issubset(seg) and segment in self.market_prop.keys():
+            if seg.issubset(segment) and segment in self.market_prop.keys():
                 market_segments[segment] = self.market_prop[segment]
         assert(len(market_segments.keys())<=2)
+        assert(len(market_segments.keys())>0)
         return market_segments 
 
 
@@ -111,8 +112,8 @@ class MyNDaysNCampaignsAgent(NDaysNCampaignsAgent):
         camp_bundles = set()
         campaigns = self.get_active_campaigns()
         for camp in campaigns:
-            # shadding bid based on some weighted average of effective reach and days left of campaign 
-            effective_reach = self.get_cumulative_reach(camp)
+            # shadding bid based on some weighted average of effective reach and days left of campaign
+            effective_reach = self.effective_reach(self.get_cumulative_reach(camp),camp.reach)
             days_left = camp.end_day - self.get_current_day()
             var = 0.8*effective_reach + 0.2*days_left 
             var = 1 if var == 0 else var
@@ -121,16 +122,18 @@ class MyNDaysNCampaignsAgent(NDaysNCampaignsAgent):
             campaign_limit = camp.budget * var 
             bundle =  BidBundle(camp.uid,campaign_limit,None)
             bid_set = set()
+            print('eff',effective_reach)
         # bidding based on the subset market segments of the target segment 
             for seg in markets.keys():
                 item_bid = var*(camp.budget/camp.reach)* self.market_prop[seg]
                 limit = var* camp.budget * self.market_prop[seg]
                 bid = Bid(self,seg,item_bid,limit)
                 bid_set.add(bid)
-                self.bids[camp] = bid
-            bundle.bid_entries = bid_set 
+                print('b',item_bid)
+            bundle.bid_entries = bid_set
             camp_bundles.add(bundle)
-        self.write(self.bids,'bids')
+            self.bids[camp] = bid_set
+        self.write(self.bids,'bids',True)
         return camp_bundles
 
     def get_campaign_bids(self, campaigns_for_auction:  Set[Campaign]) -> Dict[Campaign, float]:
@@ -153,22 +156,27 @@ class MyNDaysNCampaignsAgent(NDaysNCampaignsAgent):
                 bid = self.clip_campaign_bid(camp,bid)
             self.camp_bids[camp] = bid
             bids.__setitem__(camp, bid)
-        self.write(self.camp_bids,'camp_bids')
+        self.write(self.camp_bids,'camp_bids',False)
         return bids
 
-    def write(self,dataset, file_path: str):
-	#Write the json dataset to a file
+    def write(self,dataset, file_path: str, bids):
+   #Write the json dataset to a file
         json_serializable_dict = {}
-        for campaign, bid in dataset.items():
-            json_serializable_dict[str(campaign)] = str(bid)
-
-        # Save the dictionary to a JSON file
+        if bids == True:
+            for campaign, bid_set in dataset.items():
+                json_serializable_dict[str(campaign)] = '\n'.join(str(bid) for bid in bid_set)
+        else:
+            for campaign, bid in dataset.items():
+                json_serializable_dict[str(campaign)] = str(bid)
         with open(file_path, 'w') as json_file:
-            json.dump(json_serializable_dict, json_file)
+       # Write each key-value pair as a separate JSON object on a new line
+           for key, value in json_serializable_dict.items():
+               json_file.write(json.dumps({key: value}) + '\n')
 
-        # # Optionally, you can also save the original dictionary to a pickle file
-        # with open(file_name, 'wb') as pickle_file:
-        #     pickle.dump(dataset, pickle_file)
+
+       # # Optionally, you can also save the original dictionary to a pickle file
+       # with open(file_name, 'wb') as pickle_file:
+       #     pickle.dump(dataset, pickle_file)
 
 
     
@@ -179,4 +187,4 @@ if __name__ == "__main__":
 
     # Don't change this. Adapt initialization to your environment
     simulator = AdXGameSimulator()
-    simulator.run_simulation(agents=test_agents, num_simulations=20)
+    simulator.run_simulation(agents=test_agents, num_simulations=500)

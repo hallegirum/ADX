@@ -66,7 +66,7 @@ class Bid:
         assert self.bid_per_item <= self.bid_limit
     
     def __str__(self):
-        return f"Bid(uid={self.uid}, bidder={self.bidder}, item={self.item}, bid_per_item={self.bid_per_item}, bid_limit={self.bid_limit})"
+        return f"Bid( item={self.item}, bid_per_item={self.bid_per_item}, bid_limit={self.bid_limit})"
 
 
     def __eq__(self, other):
