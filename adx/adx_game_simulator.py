@@ -237,7 +237,7 @@ class AdXGameSimulator:
         print(f"\n\t@@@ WINNER: {winner.name} @@@")
     
     def print_final_results(self, total_profits : Dict[NDaysNCampaignsAgent, float], num_simulations: int) -> None:
-        print("\n\t################# SIMULATION RESULTS ##################")
+        print("\n\t################# Final RESULTS ##################")
         print("\n\t#### Agent \t\t# Profit \t###")
         print("\n\t###########################################")
         for agent in sorted(self.agents, key=lambda a: total_profits[a], reverse=True):

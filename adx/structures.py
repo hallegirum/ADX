@@ -64,6 +64,10 @@ class Bid:
         assert self.bid_limit >= 0
         # A bid cannot be bigger than its limit, since in the worst case a bidder could end up paying a price arbitrarily close to its bid.
         assert self.bid_per_item <= self.bid_limit
+    
+    def __str__(self):
+        return f"Bid(uid={self.uid}, bidder={self.bidder}, item={self.item}, bid_per_item={self.bid_per_item}, bid_limit={self.bid_limit})"
+
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.uid == other.uid
@@ -111,6 +115,9 @@ class Campaign:
         self._end = end_day
         self._costs = 0 
         self._impressions = 0
+    
+    def __str__(self):
+        return f"Campaign(uid={self.uid}, reach={self._reach}, budget={self._budget}, target={self._target}, start={self._start}, end={self._end})"
     
     @property 
     def start_day(self):

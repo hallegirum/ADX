@@ -1,3 +1,4 @@
+
 import random
 from typing import Set, Dict
 from adx.structures import Bid, Campaign, BidBundle, MarketSegment
@@ -12,8 +13,8 @@ class Tier1NDaysNCampaignsAgent(NDaysNCampaignsAgent):
         bundles = set()
         for campaign in self.get_active_campaigns():
             bids = set()
-            bid_per_item = max(0.1, (campaign.budget - self.get_cumulative_cost(campaign)) /
-                               (campaign.reach - self.get_cumulative_reach(campaign) + 0.0001))
+            bid_per_item = min(1, max(0.1, (campaign.budget - self.get_cumulative_cost(campaign)) /
+                               (campaign.reach - self.get_cumulative_reach(campaign) + 0.0001)))
             total_limit = max(1.0, campaign.budget - self.get_cumulative_cost(campaign))
             auction_item = campaign.target_segment
             bid = Bid(self, auction_item, bid_per_item, total_limit)
@@ -31,5 +32,3 @@ class Tier1NDaysNCampaignsAgent(NDaysNCampaignsAgent):
 
     def on_new_game(self):
         pass
-
-
