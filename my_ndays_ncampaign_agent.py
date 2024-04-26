@@ -133,7 +133,7 @@ class MyNDaysNCampaignsAgent(NDaysNCampaignsAgent):
             bundle.bid_entries = bid_set
             camp_bundles.add(bundle)
             self.bids[camp] = bid_set
-        self.write(self.bids,'bids',True)
+        # self.write(self.bids,'bids',True)
         return camp_bundles
 
     def get_campaign_bids(self, campaigns_for_auction:  Set[Campaign]) -> Dict[Campaign, float]:
@@ -156,7 +156,7 @@ class MyNDaysNCampaignsAgent(NDaysNCampaignsAgent):
                 bid = self.clip_campaign_bid(camp,bid)
             self.camp_bids[camp] = bid
             bids.__setitem__(camp, bid)
-        self.write(self.camp_bids,'camp_bids',False)
+        # self.write(self.camp_bids,'camp_bids',False)
         return bids
 
     def write(self,dataset, file_path: str, bids):
