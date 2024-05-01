@@ -31,6 +31,8 @@ class RL_agent(NDaysNCampaignsAgent):
         """
         choose action from model return action -> convert from tensor to Set[Bidbundle]
         """ 
+        
+
 
 class Auction(adx):
     def __init__(self, config: Dict | None = None):

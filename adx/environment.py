@@ -1,7 +1,11 @@
 import tensorflow as tf 
 import os 
+import gym
 import numpy as np 
-from auction import Auction
+import model as Model
+from adx.agents import NDaysNCampaignsAgent
+from adx.tier1_ndays_ncampaign_agent import Tier1NDaysNCampaignsAgent
+from auction import Auction, RL_agent
 from states import State, CampaignBidderState
 from pmfs import PMF
 
@@ -44,7 +48,7 @@ class Env():
         results  = np.array(results)
         return states,results,is_done
         
-    def play_single_episode():
+    def play_single_episode(self, day, my_agent):
         
         """
         pseudocode:
@@ -54,14 +58,37 @@ class Env():
             return states, actions, rewards for entire episode vectorized 
         """
 
-    def train():
-        """
-        with tf.GradientTape() as tape:
-            play_single_episode
-            calculate loss
-            optimize weights
-            return the total_reward for the episode 
-        """
+        state = self.reset()[0]
+        # auction = Auction.run_auction(step, my_agent)
+
+        states, actions, rewards = [], [], []
+        max_steps = 10
+        num_actions = 8 # number of different user campaigns in AdX
+        my_agent = RL_agent.init
+
+        test_agents = [NDaysNCampaignsAgent()] + [Tier1NDaysNCampaignsAgent(name=f"Agent {i + 1}") for i in range(7)]
+        test_agents.append(my_agent)
+        test_agents.append(my_agent)
+
+        for step in range(max_steps):
+
+            states.append(state)
+
+            probability_all_actions = Model(state.reshape(-1, len(states))).numpy().reshape(-1)
+            action = np.random.choice(num_actions, p= probability_all_actions)
+
+            my_agent.set_action(action)
+
+            states, results, is_done = self.step(test_agents, step, RL_agent)
+
+            actions.append(action)
+            rewards.append(results)
+        
+        states, actions, rewards = (np.array(states), np.array(actions), np.array(rewards))
+
+        return states, actions, rewards
+
+
 
 
          
