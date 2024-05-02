@@ -66,8 +66,7 @@ class Env():
         num_actions = 8 # number of different user campaigns in AdX
         my_agent = RL_agent.init
 
-        test_agents = [NDaysNCampaignsAgent()] + [Tier1NDaysNCampaignsAgent(name=f"Agent {i + 1}") for i in range(7)]
-        test_agents.append(my_agent)
+        test_agents = [NDaysNCampaignsAgent(name=f"Agent {i + 1}") for i in range(3)]+ [Tier1NDaysNCampaignsAgent(name=f"Agent {i + 1}") for i in range(6)]
         test_agents.append(my_agent)
 
         for step in range(max_steps):

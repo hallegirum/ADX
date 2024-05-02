@@ -4,6 +4,10 @@ from adx.structures import Bid, Campaign, BidBundle, MarketSegment
 import random
 from typing import Set, Dict
 from math import isfinite, atan
+import model 
+import PMF
+
+
 
 
 
@@ -12,10 +16,12 @@ class RL_agent(NDaysNCampaignsAgent):
 
     def __init__(self):
         super().__init__()
+        self._auction_item_specs_by_id = { spec.uid : spec for spec in PMF.items() }
+
 
 
     def on_new_game(self) -> None:
-        pass
+        self.action = None
      
 
     def get_campaign_bids(self, campaigns_for_auction: Set[Campaign]) -> Dict[Campaign, float]:
@@ -25,13 +31,27 @@ class RL_agent(NDaysNCampaignsAgent):
             bids[campaign] = bid_value
         return bids
 
+    def set_action(self,action):
+        self.action = action
 
 
     def get_ad_bids(self) -> Set[BidBundle]:
         """
         choose action from model return action -> convert from tensor to Set[Bidbundle]
-        """ 
-        
+        """
+        camp_bundle = set()
+        for (camp,bund) in enumerate(self.my_campaigns(),self.action):
+            bundle = BidBundle()
+            bundle.campaign_id = camp.uid
+            bid_entries = set()
+            for bid_entry in bund:
+                market_seg = self.auction_item_specs_by_id[bid_entry[0]]
+                bid_obj = Bid.from_vector(bid_entry, self, market_seg)
+                bid_entries.add(bid_obj)
+            bundle.bid_entries = bid_entries
+            camp_bundle.add(bundle)
+        return camp_bundle
+
 
 
 class Auction(adx):

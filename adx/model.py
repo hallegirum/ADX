@@ -104,6 +104,7 @@ class ReinforceWithBaseline(tf.keras.Model):
         for i in range(timesteps-2,-1,-1):
             discounted_rewards[i] = (discounted_rewards[i+1]*discount_factor) + rewards[i]
         return discounted_rewards
+<<<<<<< Updated upstream
 
 
     def train(self, day):
@@ -120,6 +121,8 @@ class ReinforceWithBaseline(tf.keras.Model):
         # add other critic - model class, takes in a reward and starts the next bid
         return total_reward
 
+=======
+>>>>>>> Stashed changes
  
 
 
