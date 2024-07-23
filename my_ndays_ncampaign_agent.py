@@ -1,18 +1,24 @@
-from adx.agents import NDaysNCampaignsAgent
-from adx.tier1_ndays_ncampaign_agent import Tier1NDaysNCampaignsAgent
-from adx.adx_game_simulator import AdXGameSimulator
-from adx.structures import Bid, Campaign, BidBundle, MarketSegment
+# from adx.agents import NDaysNCampaignsAgent
+# from adx.tier1_ndays_ncampaign_agent import Tier1NDaysNCampaignsAgent
+# from adx.adx_game_simulator import AdXGameSimulator
+# from adx.structures import Bid, Campaign, BidBundle, MarketSegment
+from agents import NDaysNCampaignsAgent
+from Agent1 import AGENT1 
+from tier1_ndays_ncampaign_agent import Tier1NDaysNCampaignsAgent
+from adx_game_simulator import AdXGameSimulator
+from structures import Bid, Campaign, BidBundle, MarketSegment
 from typing import Set, Dict
 import os 
 import pickle
 import json
+from plots import plot, plot_camp, profit_plot
 
 class MyNDaysNCampaignsAgent(NDaysNCampaignsAgent):
 
     def __init__(self):
         # TODO: fill this in (if necessary)
         super().__init__()
-        self.name = "orange peel"  
+        self.name =  "orangepeel"  
         self.market_freq = {}
         self.market_prop = {}
         self.build_freq()
@@ -20,8 +26,6 @@ class MyNDaysNCampaignsAgent(NDaysNCampaignsAgent):
         self.total = 10000
         self.on_new_game()
 
-
-        
 
     def build_freq(self):
         # building a frequqency dictionary which maps user frequencies of for all market segments 
@@ -86,12 +90,18 @@ class MyNDaysNCampaignsAgent(NDaysNCampaignsAgent):
             elif segment == MarketSegment(("Female", "Old", "HighIncome")):
                 self.market_prop[segment] = 407/(407 + 2401)
             
-
-
     def on_new_game(self) -> None:
-        # TODO: fill this in (if necessary)
-        self.bids = {}
-        self.camp_bids = {}
+        self.item_bid_list = []
+        self.var_list = []
+        self.ef_list  = []
+        self.new_var_list = []
+        self.market_prop_list = []
+        self.limit_list = []
+        self.camp_bid_list = []
+        self.market_prop_c = []
+        self.similarity_score = []
+
+
 
     # helper function that given a campaign returns a dictionary with all the subsets of the campaigns'
     # market segment and the value being the proportion of the market segment 
@@ -105,36 +115,60 @@ class MyNDaysNCampaignsAgent(NDaysNCampaignsAgent):
         assert(len(market_segments.keys())>0)
         return market_segments 
 
-
-
     def get_ad_bids(self) -> Set[BidBundle]:
-        # TODO: fill this in
+        # for data plotting 
+
         camp_bundles = set()
         campaigns = self.get_active_campaigns()
         for camp in campaigns:
             # shadding bid based on some weighted average of effective reach and days left of campaign
             effective_reach = self.effective_reach(self.get_cumulative_reach(camp),camp.reach)
             days_left = camp.end_day - self.get_current_day()
-            var = 0.8*effective_reach + 0.2*days_left 
+            var = 0.8*(1.38442 - effective_reach) + 0.2*days_left 
             var = 1 if var == 0 else var
             markets = self.get_market_seg(camp)
             # defining bid bundle
             campaign_limit = camp.budget * var 
             bundle =  BidBundle(camp.uid,campaign_limit,None)
             bid_set = set()
-            print('eff',effective_reach)
         # bidding based on the subset market segments of the target segment 
             for seg in markets.keys():
-                item_bid = var*(camp.budget/camp.reach)* self.market_prop[seg]
-                limit = var* camp.budget * self.market_prop[seg]
+                self.ef_list.append(effective_reach)
+                self.var_list.append(var)
+                new_var = 0.3* var + 0.7*(1-self.market_prop[seg])
+                self.new_var_list.append(new_var)
+                self.market_prop_list.append(self.market_prop[seg])
+                item_bid = new_var*(camp.budget/camp.reach)
+                self.item_bid_list.append(item_bid)
+                limit = new_var* camp.budget 
+                self.limit_list.append(limit)
                 bid = Bid(self,seg,item_bid,limit)
                 bid_set.add(bid)
-                print('b',item_bid)
             bundle.bid_entries = bid_set
             camp_bundles.add(bundle)
-            self.bids[camp] = bid_set
-        # self.write(self.bids,'bids',True)
         return camp_bundles
+    
+
+    def similar_segments(self,campaigns_for_auction):
+        freq_table = {}
+        for c in campaigns_for_auction: # iterate through all the campaigns
+            market_segment = c.target_segment 
+            for seg in market_segment.all_segments(): # iterate through all the market segments
+                if market_segment.issubset(seg):
+                    if seg in freq_table:
+                        freq_table[seg] = freq_table[seg] + 1
+                    else:
+                        freq_table[seg] = 1
+            for my_camp in self.get_active_campaigns():
+                ms = my_camp.target_segment 
+                if market_segment.issubset(ms):
+                    freq_table[ms] +=1 
+        return freq_table
+
+
+                    
+            
+        
 
     def get_campaign_bids(self, campaigns_for_auction:  Set[Campaign]) -> Dict[Campaign, float]:
         # TODO: fill this in 
@@ -142,49 +176,38 @@ class MyNDaysNCampaignsAgent(NDaysNCampaignsAgent):
         for camp in campaigns_for_auction:
             market_segment = camp.target_segment # the target we are trying to reach
 
-            #TODO: when we do market segment / total is that the appropriate total 10000? or is it total of the sub category?
-            #because some subsets already return proportions... idk maybe I'm overcomplicating I'll have to think about it
-            same = 0
-            for my_camp in self.get_active_campaigns():
-                ms = my_camp.target_segment 
-                if market_segment.issubset(ms) or ms.issubset(market_segment):
-                    same +=1
-
-            prop_same_camp = same/ max(1,len(self.get_active_campaigns()))
+            #frequency table of market segments -> frequency in campaigns for auction
+            freq_table = self.similar_segments(campaigns_for_auction)    
+            total_camp_num = len(self.get_active_campaigns()) + len(campaigns_for_auction)
+            prop_same_camp = 1 + freq_table[market_segment]/ max(1,total_camp_num)
             bid = (1-(self.market_freq[market_segment]/self.total))*camp.reach*prop_same_camp 
+            self.camp_bid_list.append(bid)
+            self.similarity_score.append(prop_same_camp)
+            self.market_prop_c.append(self.market_freq[market_segment]/self.total)
             if not self.is_valid_campaign_bid(camp,bid):
                 bid = self.clip_campaign_bid(camp,bid)
-            self.camp_bids[camp] = bid
             bids.__setitem__(camp, bid)
-        # self.write(self.camp_bids,'camp_bids',False)
         return bids
-
-    def write(self,dataset, file_path: str, bids):
-   #Write the json dataset to a file
-        json_serializable_dict = {}
-        if bids == True:
-            for campaign, bid_set in dataset.items():
-                json_serializable_dict[str(campaign)] = '\n'.join(str(bid) for bid in bid_set)
-        else:
-            for campaign, bid in dataset.items():
-                json_serializable_dict[str(campaign)] = str(bid)
-        with open(file_path, 'w') as json_file:
-       # Write each key-value pair as a separate JSON object on a new line
-           for key, value in json_serializable_dict.items():
-               json_file.write(json.dumps({key: value}) + '\n')
-
-
-       # # Optionally, you can also save the original dictionary to a pickle file
-       # with open(file_name, 'wb') as pickle_file:
-       #     pickle.dump(dataset, pickle_file)
-
-
     
+
+
+ 
 
 if __name__ == "__main__":
     # Here's an opportunity to test offline against some TA agents. Just run this file to do so.
-    test_agents = [MyNDaysNCampaignsAgent()] + [Tier1NDaysNCampaignsAgent(name=f"Agent {i + 1}") for i in range(9)]
-
+    myagent =MyNDaysNCampaignsAgent()
+    test_agents = [myagent] + [Tier1NDaysNCampaignsAgent(name=f"Agent {i + 1}") for i in range(4)] + [AGENT1(name=f"My {i + 1}") for i in range(5)]
     # Don't change this. Adapt initialization to your environment
     simulator = AdXGameSimulator()
-    simulator.run_simulation(agents=test_agents, num_simulations=500)
+    simulator.run_simulation(test_agents,500,myagent)
+            
+    # plot(myagent.item_bid_list,myagent.ef_list,myagent.var_list,myagent.new_var_list,myagent.market_prop_list)
+    # plot_camp(myagent.camp_bid_list,myagent.similarity_score,myagent.market_prop_c)
+
+    # make keys of 
+
+    profits_per_simulation = simulator.profits
+    profit_plot(profits_per_simulation)
+
+  
+    
